@@ -1,20 +1,19 @@
 #!/bin/env python
 
 """
-dsa rename to main.py 
+Create 3D model file of PET scanner defined in PETSIRD list mode file.
+Known format that work:
+    - ply, stl, obj
+With color? 
+    - ply
 
-dsa describe me! 
+3D viewer tried:
+    meshlab: Work with color 
+    blender: Voodoo magic for color?
+    paraview: Work with color sometime?
 
 Potential issues:
     - If the number of detectors is not the same for each type of detectors, color stuff will break.
-
-dsa remove the following 
-reset; 
-python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_nocolor.ply --fov 250 20 --modules-only
-python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_color.ply --fov 250 20 --modules-only --show-det-eff
-python start.py -i Data/basic.petsird -o Data/totoTests_allDet_color.ply --fov 250 20 --show-det-eff
-python start.py -i Data/basic.petsird -o Data/totoTests_allDet_nocolor.ply --fov 250 20
-
 
 """
 
@@ -120,12 +119,7 @@ def create_box_from_vertices(vertices):
 def extract_detector_eff(show_det_eff, header):
     if header.scanner.detection_efficiencies.det_el_efficiencies is not None:
         if show_det_eff == True:
-            # dsa header.scanner.detection_efficiencies.det_el_efficiencies.shape
-            detector_efficiencies = np.random.uniform(
-                0.0,
-                1.0,
-                header.scanner.detection_efficiencies.det_el_efficiencies.shape,
-            )
+            detector_efficiencies = header.scanner.detection_efficiencies.det_el_efficiencies
         else:
             detector_efficiencies = np.ones(
                 header.scanner.detection_efficiencies.det_el_efficiencies.shape
@@ -184,7 +178,7 @@ def set_module_color(
 # Main
 #########################################################################################
 def parserCreator():
-    parser = argparse.ArgumentParser(description="dsa")
+    parser = argparse.ArgumentParser(description="Create 3D model of PET scanner defined in PETSIRD list mode file.")
 
     parser.add_argument(
         "-i",

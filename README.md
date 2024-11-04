@@ -14,3 +14,4 @@ Enhance the viewer
   - Color hierachy module/detector
   - Checking if the geometry is okay
   - ~ Extract lut and save it
+  - Use color choice

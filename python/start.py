@@ -201,11 +201,10 @@ if __name__ == "__main__":
                             (-1, len(det_el) * num_det_in_module)
                         )[mod_i, :]
                     )
-                    if color is not None:
-                        f_color = np.array([color[0], color[1], color[2], 50]).astype(
-                            np.uint8
-                        )
-                        module_mesh.visual.face_colors = f_color
+                    f_color = np.array([color[0], color[1], color[2], 50]).astype(
+                        np.uint8
+                    )
+                    module_mesh.visual.face_colors = f_color
                     shapes.append(module_mesh)
 
         if args.fov is not None:

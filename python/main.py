@@ -138,8 +138,10 @@ def extract_detector_eff(show_det_eff, header):
     return detector_efficiencies
 
     
-def set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i):
-    if detector_efficiencies is not None:
+def set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i, random_color):
+    if random_color == True:
+        color = np.random.randint(0, 255, size=3)
+    elif detector_efficiencies is not None:
         color = (crystal_color * detector_efficiencies[mod_i * num_det_in_module + det_i])
     else:
         color = crystal_color
@@ -155,9 +157,11 @@ def set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module
 
 
 def set_module_color(
-    module_mesh, detector_efficiencies, mod_i, num_det_in_module, det_el
+    module_mesh, detector_efficiencies, mod_i, num_det_in_module, det_el, random_color
 ):
-    if detector_efficiencies is not None:
+    if random_color == True:
+        color = np.random.randint(0, 255, size=3)
+    elif detector_efficiencies is not None:
         # Mean of the detector efficiency in the current module
         color = crystal_color * np.mean(
             detector_efficiencies.reshape((-1, len(det_el) * num_det_in_module))[
@@ -219,6 +223,14 @@ def parserCreator():
         required=False,
         help="Change color following detector effeciency",
     )
+    parser.add_argument(
+        "--random-color",
+        action="store_true",
+        dest="random_color",
+        default=False,
+        required=False,
+        help="Force random color for easier debug position",
+    )
 
     return parser.parse_args()
 
@@ -267,8 +279,7 @@ if __name__ == "__main__":
                         if not modules_only:
                             det_mesh = create_box_from_vertices(corners)
 
-                            if True:
-                                det_mesh = set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i)
+                            det_mesh = set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i, args.random_color)
 
                             shapes.append(det_mesh)
                         else:
@@ -277,13 +288,12 @@ if __name__ == "__main__":
                     vertices_reshaped = np.array(vertices).reshape((-1, 3))
                     module_mesh = trimesh.convex.convex_hull(vertices_reshaped)
 
-                    if True:
-                        module_mesh = set_module_color(
+                    module_mesh = set_module_color(
                             module_mesh,
                             detector_efficiencies,
                             mod_i,
                             num_det_in_module,
-                            det_el,
+                            det_el, args.random_color
                         )
 
                     shapes.append(module_mesh)

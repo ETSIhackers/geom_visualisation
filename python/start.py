@@ -1,23 +1,15 @@
 #!/bin/env python
 
 """
-<<<<<<< HEAD
 dsa rename to main.py 
 
 dsa describe me! 
-=======
-dsa describe me!
->>>>>>> caccf4e35d6102cbae2fecae093ce0fc41953179
 
 Potential issues:
     - If the number of detectors is not the same for each type of detectors, color stuff will break.
 
-<<<<<<< HEAD
 dsa remove the following 
 reset; 
-=======
-reset;
->>>>>>> caccf4e35d6102cbae2fecae093ce0fc41953179
 python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_nocolor.ply --fov 250 20 --modules-only
 python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_color.ply --fov 250 20 --modules-only --show-det-eff
 python start.py -i Data/basic.petsird -o Data/totoTests_allDet_color.ply --fov 250 20 --show-det-eff
@@ -154,7 +146,6 @@ def extract_detector_eff(show_det_eff, header):
     
 def set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i):
     if detector_efficiencies is not None:
-<<<<<<< HEAD
         color = (crystal_color * detector_efficiencies[mod_i * num_det_in_module + det_i])
     else:
         color = crystal_color
@@ -167,11 +158,6 @@ def set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module
 
     return det_mesh
 
-=======
-        return crystal_color * detector_efficiencies[mod_i * num_det_in_module + det_i]
-    else:
-        return crystal_color
->>>>>>> caccf4e35d6102cbae2fecae093ce0fc41953179
 
 
 def set_module_color(
@@ -285,20 +271,12 @@ if __name__ == "__main__":
                             corners.append(boxcorner.c)
 
                         if not modules_only:
-<<<<<<< HEAD
                             det_mesh = create_box_from_vertices(corners)
 
                             if True:
                                 det_mesh = set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i)
 
                             shapes.append(det_mesh)
-=======
-                            color = get_detector_color(
-                                detector_efficiencies, mod_i, num_det_in_module, det_i
-                            )
-                            # dsa setcolor
-                            shapes.append(create_box_from_vertices(corners, color))
->>>>>>> caccf4e35d6102cbae2fecae093ce0fc41953179
                         else:
                             vertices.append(corners)
                 if modules_only:

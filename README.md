@@ -1,20 +1,15 @@
-# Note/idea on this ocntribution
+# Note/idea on this contribution
 Enhance the viewer
-  - Discuss format
-    - Idea leave viewing to existing program
-      - stl, ply and vrml
-        > Stl
-          - no color, less good in long term
-        > ply
-          - As color, seems starndad
-          - Created with trimesh create mesh and create ply file
-  - Better viewer
-    - add direction of detectors
-    - view fov
-  - use case to check geo ok?
-  - Extract lut and save it
-  - displaying normalisation
-    - Show relative effeciency, alpha
+  x Better viewer
+    ~ add direction of detectors
+    x view fov
+  ~ use case to check geo ok?
+  ~ Extract lut and save it
+  x displaying normalisation
+    x absolute
+    ~ Show relative effeciency, alpha
+  - Show modules only
+  - Color hierachie module/detecteur
 
 
 TODO: remove what following?

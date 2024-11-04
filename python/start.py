@@ -82,9 +82,9 @@ def create_box_from_vertices(vertices, color=None):
     # Create and return a Trimesh object
     box = trimesh.Trimesh(vertices=vertices, faces=faces)
     if color is not None:
-        #v_color = np.array([color[0],color[1],color[2], 50] * len(vertices)).astype(np.uint8)
-        #box.visual.vertex_colors = v_color
-        f_color = np.array([color[0],color[1],color[2], 50]).astype(np.uint8)
+        # v_color = np.array([color[0],color[1],color[2], 50] * len(vertices)).astype(np.uint8)
+        # box.visual.vertex_colors = v_color
+        f_color = np.array([color[0], color[1], color[2], 50]).astype(np.uint8)
         box.visual.face_colors = f_color
     return box
 
@@ -107,6 +107,14 @@ if __name__ == "__main__":
         required=True,
         help="File to write",
     )
+    parser.add_argument(
+        "--fov",
+        type=float,
+        nargs=2,
+        default=None,
+        required=False,
+        help="Add a cylindrical FOV, as radius and height",
+    )
     args = parser.parse_args()
 
     file = None
@@ -123,20 +131,28 @@ if __name__ == "__main__":
         for time_block in reader.read_time_blocks():
             pass
 
-        crystal_color = np.array([10,50,0],dtype=np.uint8)
+        crystal_color = np.array([10, 50, 0], dtype=np.uint8)
 
-        detector_efficiencies = header.scanner.detection_efficiencies.det_el_efficiencies
+        detector_efficiencies = (
+            header.scanner.detection_efficiencies.det_el_efficiencies
+        )
         detector_efficiencies = np.mean(detector_efficiencies, axis=1)
 
-        crystals = []
+        shapes = []
         # draw all crystals
         for rep_module in header.scanner.scanner_geometry.replicated_modules:
-            det_el = rep_module.object.detecting_elements # Get all the detecting elements
-            for mod_i in range(len(rep_module.transforms)): # For each transformation of the module
+            det_el = (
+                rep_module.object.detecting_elements
+            )  # Get all the detecting elements
+            for mod_i in range(
+                len(rep_module.transforms)
+            ):  # For each transformation of the module
                 mod_transform = rep_module.transforms[mod_i]
-                for rep_volume in det_el: # For each detector in the module
+                for rep_volume in det_el:  # For each detector in the module
                     num_det_in_module = len(rep_volume.transforms)
-                    for det_i in range(num_det_in_module): # For each transformation in the detector
+                    for det_i in range(
+                        num_det_in_module
+                    ):  # For each transformation in the detector
                         transform = rep_volume.transforms[det_i]
                         box: petsird.BoxShape = transform_BoxShape(
                             mult_transforms([mod_transform, transform]),
@@ -145,8 +161,14 @@ if __name__ == "__main__":
                         corners = []
                         for boxcorner in box.corners:
                             corners.append(boxcorner.c)
-                        color = crystal_color * detector_efficiencies[mod_i*num_det_in_module + det_i]
-                        crystals.append(create_box_from_vertices(corners, color))
-
-        combined = trimesh.util.concatenate(crystals)
+                        color = (
+                            crystal_color
+                            * detector_efficiencies[mod_i * num_det_in_module + det_i]
+                        )
+                        shapes.append(create_box_from_vertices(corners, color))
+        if args.fov is not None:
+            shapes.append(
+                trimesh.creation.cylinder(radius=args.fov[0], height=args.fov[1])
+            )
+        combined = trimesh.util.concatenate(shapes)
         combined.export(output_fname)

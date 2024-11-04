@@ -1,12 +1,12 @@
 #!/bin/env python
 
 """
-dsa describe me! 
+dsa describe me!
 
 Potential issues:
     - If the number of detectors is not the same for each type of detectors, color stuff will break.
 
-reset; 
+reset;
 python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_nocolor.ply --fov 250 20 --modules-only
 python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_color.ply --fov 250 20 --modules-only --show-det-eff
 python start.py -i Data/basic.petsird -o Data/totoTests_allDet_color.ply --fov 250 20 --show-det-eff
@@ -17,7 +17,7 @@ python start.py -i Data/basic.petsird -o Data/totoTests_allDet_nocolor.ply --fov
 
 
 #########################################################################################
-# Import 
+# Import
 #########################################################################################
 import sys
 import os
@@ -28,9 +28,8 @@ import trimesh
 import argparse
 
 
-
 #########################################################################################
-# Constants 
+# Constants
 #########################################################################################
 crystal_color = np.array([255, 40, 40], dtype=np.uint8)
 
@@ -119,19 +118,26 @@ def create_box_from_vertices(vertices, color=None):
 
 def extract_detector_eff(show_det_eff, header):
     if header.scanner.detection_efficiencies.det_el_efficiencies is not None:
-            if show_det_eff == True:
-                # dsa header.scanner.detection_efficiencies.det_el_efficiencies.shape
-                detector_efficiencies = (
-                        np.random.uniform(0.0, 1.0, header.scanner.detection_efficiencies.det_el_efficiencies.shape)
-                    )
-            else:
-                detector_efficiencies = np.ones(
-                        header.scanner.detection_efficiencies.det_el_efficiencies.shape
-                    )
-                # For viewing purporse, we simply get the mean of detector efficiency energy-wise
-            detector_efficiencies = np.mean(detector_efficiencies, axis=1)
-    elif header.scanner.detection_efficiencies.det_el_efficiencies is None and show_det_eff == True:
-        sys.exit("The scanner detection efficiencies is not defined. Correct this or remove the detector efficiency flag.")
+        if show_det_eff == True:
+            # dsa header.scanner.detection_efficiencies.det_el_efficiencies.shape
+            detector_efficiencies = np.random.uniform(
+                0.0,
+                1.0,
+                header.scanner.detection_efficiencies.det_el_efficiencies.shape,
+            )
+        else:
+            detector_efficiencies = np.ones(
+                header.scanner.detection_efficiencies.det_el_efficiencies.shape
+            )
+            # For viewing purporse, we simply get the mean of detector efficiency energy-wise
+        detector_efficiencies = np.mean(detector_efficiencies, axis=1)
+    elif (
+        header.scanner.detection_efficiencies.det_el_efficiencies is None
+        and show_det_eff == True
+    ):
+        sys.exit(
+            "The scanner detection efficiencies is not defined. Correct this or remove the detector efficiency flag."
+        )
     else:
         detector_efficiencies = None
     return detector_efficiencies
@@ -139,26 +145,29 @@ def extract_detector_eff(show_det_eff, header):
 
 def get_detector_color(detector_efficiencies, mod_i, num_det_in_module, det_i):
     if detector_efficiencies is not None:
-        return (crystal_color * detector_efficiencies[mod_i * num_det_in_module + det_i])
+        return crystal_color * detector_efficiencies[mod_i * num_det_in_module + det_i]
     else:
         return crystal_color
-    
 
-def set_module_color(module_mesh, detector_efficiencies, mod_i, num_det_in_module, det_el):
+
+def set_module_color(
+    module_mesh, detector_efficiencies, mod_i, num_det_in_module, det_el
+):
     if detector_efficiencies is not None:
         # Mean of the detector efficiency in the current module
-        color = crystal_color * np.mean(detector_efficiencies.reshape((-1, len(det_el) * num_det_in_module))[mod_i, :])
+        color = crystal_color * np.mean(
+            detector_efficiencies.reshape((-1, len(det_el) * num_det_in_module))[
+                mod_i, :
+            ]
+        )
     else:
         color = crystal_color
 
-    f_color = np.array([color[0], color[1], color[2], 50]).astype(
-        np.uint8
-    )
+    f_color = np.array([color[0], color[1], color[2], 50]).astype(np.uint8)
 
     module_mesh.visual.face_colors = f_color
 
     return module_mesh
-
 
 
 #########################################################################################
@@ -181,7 +190,7 @@ if __name__ == "__main__":
         type=str,
         default=None,
         required=True,
-        help="File to write",
+        help="File to write (with the appropriate file format extension)",
     )
     parser.add_argument(
         "--fov",
@@ -248,7 +257,9 @@ if __name__ == "__main__":
                             corners.append(boxcorner.c)
 
                         if not modules_only:
-                            color = get_detector_color(detector_efficiencies, mod_i, num_det_in_module, det_i)
+                            color = get_detector_color(
+                                detector_efficiencies, mod_i, num_det_in_module, det_i
+                            )
                             # dsa setcolor
                             shapes.append(create_box_from_vertices(corners, color))
                         else:
@@ -258,7 +269,13 @@ if __name__ == "__main__":
                     module_mesh = trimesh.convex.convex_hull(vertices_reshaped)
 
                     if True:
-                        module_mesh = set_module_color(module_mesh, detector_efficiencies, mod_i, num_det_in_module, det_el)
+                        module_mesh = set_module_color(
+                            module_mesh,
+                            detector_efficiencies,
+                            mod_i,
+                            num_det_in_module,
+                            det_el,
+                        )
 
                     shapes.append(module_mesh)
 

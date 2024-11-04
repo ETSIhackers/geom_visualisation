@@ -131,7 +131,7 @@ if __name__ == "__main__":
         for time_block in reader.read_time_blocks():
             pass
 
-        crystal_color = np.array([10, 50, 0], dtype=np.uint8)
+        crystal_color = np.array([255, 40, 40], dtype=np.uint8)
 
         detector_efficiencies = (
             header.scanner.detection_efficiencies.det_el_efficiencies

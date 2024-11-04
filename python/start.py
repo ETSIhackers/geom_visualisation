@@ -1,4 +1,24 @@
 #!/bin/env python
+
+"""
+dsa describe me! 
+
+Potential issues:
+    - If the number of detectors is not the same for each type of detectors, color stuff will break.
+
+reset; 
+python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_nocolor.ply --fov 250 20 --modules-only
+python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_color.ply --fov 250 20 --modules-only --show-det-eff
+python start.py -i Data/basic.petsird -o Data/totoTests_allDet_color.ply --fov 250 20 --show-det-eff
+python start.py -i Data/basic.petsird -o Data/totoTests_allDet_nocolor.ply --fov 250 20
+
+
+"""
+
+
+#########################################################################################
+# Import 
+#########################################################################################
 import sys
 import os
 import numpy as np
@@ -8,6 +28,16 @@ import trimesh
 import argparse
 
 
+
+#########################################################################################
+# Constants 
+#########################################################################################
+crystal_color = np.array([255, 40, 40], dtype=np.uint8)
+
+
+#########################################################################################
+# Methods
+#########################################################################################
 def transform_to_mat44(
     transform: petsird.RigidTransformation,
 ) -> npt.NDArray[np.float32]:
@@ -82,12 +112,58 @@ def create_box_from_vertices(vertices, color=None):
     # Create and return a Trimesh object
     box = trimesh.Trimesh(vertices=vertices, faces=faces)
     if color is not None:
-        # v_color = np.array([color[0],color[1],color[2], 50] * len(vertices)).astype(np.uint8)
-        # box.visual.vertex_colors = v_color
         f_color = np.array([color[0], color[1], color[2], 50]).astype(np.uint8)
         box.visual.face_colors = f_color
     return box
 
+
+def extract_detector_eff(show_det_eff, header):
+    if header.scanner.detection_efficiencies.det_el_efficiencies is not None:
+            if show_det_eff == True:
+                # dsa header.scanner.detection_efficiencies.det_el_efficiencies.shape
+                detector_efficiencies = (
+                        np.random.uniform(0.0, 1.0, header.scanner.detection_efficiencies.det_el_efficiencies.shape)
+                    )
+            else:
+                detector_efficiencies = np.ones(
+                        header.scanner.detection_efficiencies.det_el_efficiencies.shape
+                    )
+                # For viewing purporse, we simply get the mean of detector efficiency energy-wise
+            detector_efficiencies = np.mean(detector_efficiencies, axis=1)
+    elif header.scanner.detection_efficiencies.det_el_efficiencies is None and show_det_eff == True:
+        sys.exit("The scanner detection efficiencies is not defined. Correct this or remove the detector efficiency flag.")
+    else:
+        detector_efficiencies = None
+    return detector_efficiencies
+
+
+def get_detector_color(detector_efficiencies, mod_i, num_det_in_module, det_i):
+    if detector_efficiencies is not None:
+        return (crystal_color * detector_efficiencies[mod_i * num_det_in_module + det_i])
+    else:
+        return crystal_color
+    
+
+def set_module_color(module_mesh, detector_efficiencies, mod_i, num_det_in_module, det_el):
+    if detector_efficiencies is not None:
+        # Mean of the detector efficiency in the current module
+        color = crystal_color * np.mean(detector_efficiencies.reshape((-1, len(det_el) * num_det_in_module))[mod_i, :])
+    else:
+        color = crystal_color
+
+    f_color = np.array([color[0], color[1], color[2], 50]).astype(
+        np.uint8
+    )
+
+    module_mesh.visual.face_colors = f_color
+
+    return module_mesh
+
+
+
+#########################################################################################
+# Main
+#########################################################################################
 
 if __name__ == "__main__":
 
@@ -124,9 +200,9 @@ if __name__ == "__main__":
         help="Generate shapes for modules only",
     )
     parser.add_argument(
-        "--det-eff",
+        "--show-det-eff",
         action="store_true",
-        dest="det_eff",
+        dest="show_det_eff",
         default=False,
         required=False,
         help="Change color following detector effeciency",
@@ -148,18 +224,7 @@ if __name__ == "__main__":
         for time_block in reader.read_time_blocks():
             pass
 
-        crystal_color = np.array([255, 40, 40], dtype=np.uint8)
-
-        if args.det_eff == True:
-            detector_efficiencies = (
-                header.scanner.detection_efficiencies.det_el_efficiencies
-            )
-        else:
-            detector_efficiencies = np.ones(
-                header.scanner.detection_efficiencies.det_el_efficiencies.shape
-            )
-        # For viewing purporse, we simply get the mean of detector efficiency energy-wise
-        detector_efficiencies = np.mean(detector_efficiencies, axis=1)
+        detector_efficiencies = extract_detector_eff(args.show_det_eff, header)
 
         shapes = []
         # draw all crystals
@@ -183,12 +248,8 @@ if __name__ == "__main__":
                             corners.append(boxcorner.c)
 
                         if not modules_only:
-                            color = (
-                                crystal_color
-                                * detector_efficiencies[
-                                    mod_i * num_det_in_module + det_i
-                                ]
-                            )
+                            color = get_detector_color(detector_efficiencies, mod_i, num_det_in_module, det_i)
+                            # dsa setcolor
                             shapes.append(create_box_from_vertices(corners, color))
                         else:
                             vertices.append(corners)
@@ -196,15 +257,9 @@ if __name__ == "__main__":
                     vertices_reshaped = np.array(vertices).reshape((-1, 3))
                     module_mesh = trimesh.convex.convex_hull(vertices_reshaped)
 
-                    color = crystal_color * np.mean(
-                        detector_efficiencies.reshape(
-                            (-1, len(det_el) * num_det_in_module)
-                        )[mod_i, :]
-                    )
-                    f_color = np.array([color[0], color[1], color[2], 50]).astype(
-                        np.uint8
-                    )
-                    module_mesh.visual.face_colors = f_color
+                    if True:
+                        module_mesh = set_module_color(module_mesh, detector_efficiencies, mod_i, num_det_in_module, det_el)
+
                     shapes.append(module_mesh)
 
         if args.fov is not None:

@@ -1,11 +1,14 @@
 #!/bin/env python
 
 """
+dsa rename to main.py 
+
 dsa describe me! 
 
 Potential issues:
     - If the number of detectors is not the same for each type of detectors, color stuff will break.
 
+dsa remove the following 
 reset; 
 python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_nocolor.ply --fov 250 20 --modules-only
 python start.py -i Data/basic.petsird -o Data/totoTests_modulOnly_color.ply --fov 250 20 --modules-only --show-det-eff
@@ -92,7 +95,7 @@ def transform_BoxShape(
     )
 
 
-def create_box_from_vertices(vertices, color=None):
+def create_box_from_vertices(vertices):
     # Define faces using the indices of vertices that make up each face
     faces = [
         [1, 0, 2],
@@ -111,9 +114,7 @@ def create_box_from_vertices(vertices, color=None):
 
     # Create and return a Trimesh object
     box = trimesh.Trimesh(vertices=vertices, faces=faces)
-    if color is not None:
-        f_color = np.array([color[0], color[1], color[2], 50]).astype(np.uint8)
-        box.visual.face_colors = f_color
+
     return box
 
 
@@ -136,13 +137,21 @@ def extract_detector_eff(show_det_eff, header):
         detector_efficiencies = None
     return detector_efficiencies
 
-
-def get_detector_color(detector_efficiencies, mod_i, num_det_in_module, det_i):
-    if detector_efficiencies is not None:
-        return (crystal_color * detector_efficiencies[mod_i * num_det_in_module + det_i])
-    else:
-        return crystal_color
     
+def set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i):
+    if detector_efficiencies is not None:
+        color = (crystal_color * detector_efficiencies[mod_i * num_det_in_module + det_i])
+    else:
+        color = crystal_color
+    
+    f_color = np.array([color[0], color[1], color[2], 50]).astype(
+        np.uint8
+    )
+
+    det_mesh.visual.face_colors = f_color
+
+    return det_mesh
+
 
 def set_module_color(module_mesh, detector_efficiencies, mod_i, num_det_in_module, det_el):
     if detector_efficiencies is not None:
@@ -164,10 +173,9 @@ def set_module_color(module_mesh, detector_efficiencies, mod_i, num_det_in_modul
 #########################################################################################
 # Main
 #########################################################################################
+def parserCreator():
+    parser = argparse.ArgumentParser(description="dsa")
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Read from a file or stdin.")
     parser.add_argument(
         "-i",
         "--input",
@@ -207,7 +215,12 @@ if __name__ == "__main__":
         required=False,
         help="Change color following detector effeciency",
     )
-    args = parser.parse_args()
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parserCreator()
 
     file = None
     if args.input is None:
@@ -248,9 +261,12 @@ if __name__ == "__main__":
                             corners.append(boxcorner.c)
 
                         if not modules_only:
-                            color = get_detector_color(detector_efficiencies, mod_i, num_det_in_module, det_i)
-                            # dsa setcolor
-                            shapes.append(create_box_from_vertices(corners, color))
+                            det_mesh = create_box_from_vertices(corners)
+
+                            if True:
+                                det_mesh = set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i)
+
+                            shapes.append(det_mesh)
                         else:
                             vertices.append(corners)
                 if modules_only:

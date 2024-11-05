@@ -223,7 +223,7 @@ def create_mesh(header, modules_only=False, show_det_eff=False, random_color=Fal
                 shapes.append(module_mesh)
 
             module_count += 1
-            if num_modules >= 0 and module_count > (num_modules * (skip_modules + 1)):
+            if num_modules > 0 and module_count + skip_modules + 1 > (num_modules * (skip_modules + 1)):
                 break
 
     if fov is not None:

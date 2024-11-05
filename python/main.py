@@ -167,7 +167,8 @@ def set_module_color(
     return module_mesh
 
 
-def create_mesh(header, modules_only=False, show_det_eff=False, random_color=False, fov=None):
+def create_mesh(header, modules_only=False, show_det_eff=False, random_color=False, fov=None,
+                num_modules=0, skip_modules=0):
     """
     Create 3D model of PET scanner defined in PETSIRD list mode file.
     """
@@ -175,11 +176,16 @@ def create_mesh(header, modules_only=False, show_det_eff=False, random_color=Fal
 
     shapes = []
     # draw all crystals
+    module_count = 0
     for rep_module in header.scanner.scanner_geometry.replicated_modules:
         det_el = (
             rep_module.object.detecting_elements
         )  # Get all the detecting elements modules
         for mod_i in range(len(rep_module.transforms)):
+            if (module_count % (skip_modules + 1)) > 0:
+                module_count += 1
+                continue
+
             vertices = []  # If showing modules only
             mod_transform = rep_module.transforms[mod_i]
             for rep_volume in det_el:
@@ -215,6 +221,10 @@ def create_mesh(header, modules_only=False, show_det_eff=False, random_color=Fal
                 )
 
                 shapes.append(module_mesh)
+
+            module_count += 1
+            if num_modules >= 0 and module_count >= (num_modules * (skip_modules + 1)):
+                break
 
     if fov is not None:
         shapes.append(
@@ -276,6 +286,22 @@ def parserCreator():
         required=False,
         help="Force random color for easier debug position",
     )
+    parser.add_argument(
+        "--num-modules",
+        type=int,
+        dest="num_modules",
+        default=0,
+        required=False,
+        help="Max number of modules to convert",
+    )
+    parser.add_argument(
+        "--skip-modules",
+        type=int,
+        dest="skip_modules",
+        default=0,
+        required=False,
+        help="Skip every xx modules",
+    )
 
     return parser.parse_args()
 
@@ -297,5 +323,6 @@ if __name__ == "__main__":
         for time_block in reader.read_time_blocks():
             pass
 
-        mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov)
+        mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov,
+                           args.num_modules, args.skip_modules)
         mesh.export(output_fname)

@@ -167,7 +167,8 @@ def set_module_color(
     return module_mesh
 
 
-def create_mesh(header, modules_only=False, show_det_eff=False, random_color=False, fov=None):
+def create_mesh(header, modules_only=False, show_det_eff=False, random_color=False, fov=None,
+                start_modules=0, end_modules=-1, step_modules=1):
     """
     Create 3D model of PET scanner defined in PETSIRD list mode file.
     """
@@ -179,7 +180,10 @@ def create_mesh(header, modules_only=False, show_det_eff=False, random_color=Fal
         det_el = (
             rep_module.object.detecting_elements
         )  # Get all the detecting elements modules
-        for mod_i in range(len(rep_module.transforms)):
+        max_num_modules = len(rep_module.transforms)
+        end_range = max_num_modules if (end_modules < 0 or end_modules > max_num_modules) else end_modules
+        for mod_i in range(start_modules, end_range, step_modules):
+
             vertices = []  # If showing modules only
             mod_transform = rep_module.transforms[mod_i]
             for rep_volume in det_el:
@@ -276,6 +280,30 @@ def parserCreator():
         required=False,
         help="Force random color for easier debug position",
     )
+    parser.add_argument(
+        "--start-modules",
+        type=int,
+        dest="start_modules",
+        default=0,
+        required=False,
+        help="Start index of the modules to show. Example: start-modules=6 will display modules 6,7,8,...",
+    )
+    parser.add_argument(
+        "--end-modules",
+        type=int,
+        dest="end_modules",
+        default=-1,
+        required=False,
+        help="End index of the modules to show. Example: end-modules=16 will display modules ...,14,15,16",
+    )
+    parser.add_argument(
+        "--step-modules",
+        type=int,
+        dest="step_modules",
+        default=1,
+        required=False,
+        help="Incrementation of the module indices to show. Example: step-modules=4 will display modules 0,4,8,12,...",
+    )
 
     return parser.parse_args()
 
@@ -293,9 +321,10 @@ if __name__ == "__main__":
     with petsird.BinaryPETSIRDReader(file) as reader:
         header = reader.read_header()
 
+        mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov,
+                           args.start_modules, args.end_modules, args.step_modules)
+        mesh.export(output_fname)
+
         # Forced to do this
         for time_block in reader.read_time_blocks():
             pass
-
-        mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov)
-        mesh.export(output_fname)

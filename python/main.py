@@ -319,10 +319,10 @@ if __name__ == "__main__":
     with petsird.BinaryPETSIRDReader(file) as reader:
         header = reader.read_header()
 
-        # Forced to do this
-        for time_block in reader.read_time_blocks():
-            pass
-
         mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov,
                            args.num_modules, args.skip_modules)
         mesh.export(output_fname)
+
+        # Forced to do this
+        for time_block in reader.read_time_blocks():
+            pass

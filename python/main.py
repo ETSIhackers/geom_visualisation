@@ -168,7 +168,7 @@ def set_module_color(
 
 
 def create_mesh(header, modules_only=False, show_det_eff=False, random_color=False, fov=None,
-                num_modules=0, skip_modules=0):
+                modules_indices=None):
     """
     Create 3D model of PET scanner defined in PETSIRD list mode file.
     """
@@ -182,8 +182,8 @@ def create_mesh(header, modules_only=False, show_det_eff=False, random_color=Fal
             rep_module.object.detecting_elements
         )  # Get all the detecting elements modules
         for mod_i in range(len(rep_module.transforms)):
-            if (module_count % (skip_modules + 1)) > 0:
-                module_count += 1
+            module_count += 1
+            if modules_indices is not None and (module_count - 1) not in modules_indices:
                 continue
 
             vertices = []  # If showing modules only
@@ -221,10 +221,6 @@ def create_mesh(header, modules_only=False, show_det_eff=False, random_color=Fal
                 )
 
                 shapes.append(module_mesh)
-
-            module_count += 1
-            if num_modules > 0 and module_count + skip_modules + 1 > (num_modules * (skip_modules + 1)):
-                break
 
     if fov is not None:
         shapes.append(
@@ -308,6 +304,8 @@ def parserCreator():
 
 if __name__ == "__main__":
     args = parserCreator()
+    if args.skip_modules < 0:
+        sys.exit('skip_modules should be >= 0')
 
     file = None
     if args.input is None:
@@ -320,7 +318,9 @@ if __name__ == "__main__":
         header = reader.read_header()
 
         mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov,
-                           args.num_modules, args.skip_modules)
+                           range(0, args.num_modules * (args.skip_modules + 1), args.skip_modules + 1)
+                           if args.num_modules > 0 else None
+        )
         mesh.export(output_fname)
 
         # Forced to do this

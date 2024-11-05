@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 
 """
 Create 3D model file of PET scanner defined in PETSIRD list mode file.
@@ -178,6 +178,62 @@ def set_module_color(
     return module_mesh
 
 
+def create_mesh(header, modules_only=False, show_det_eff=False, random_color=False, fov=None):
+    """
+    Create 3D model of PET scanner defined in PETSIRD list mode file.
+    """
+    detector_efficiencies = extract_detector_eff(show_det_eff, header)
+
+    shapes = []
+    # draw all crystals
+    for rep_module in header.scanner.scanner_geometry.replicated_modules:
+        det_el = (
+            rep_module.object.detecting_elements
+        )  # Get all the detecting elements modules
+        for mod_i in range(len(rep_module.transforms)):
+            vertices = []  # If showing modules only
+            mod_transform = rep_module.transforms[mod_i]
+            for rep_volume in det_el:
+                num_det_in_module = len(rep_volume.transforms)
+                for det_i in range(num_det_in_module):
+                    transform = rep_volume.transforms[det_i]
+                    box: petsird.BoxShape = transform_BoxShape(
+                        mult_transforms([mod_transform, transform]),
+                        rep_volume.object.shape,
+                    )
+                    corners = []
+                    for boxcorner in box.corners:
+                        corners.append(boxcorner.c)
+                        
+                    if not modules_only:
+                        det_mesh = create_box_from_vertices(corners)
+                            
+                        det_mesh = set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i, random_color)
+                            
+                        shapes.append(det_mesh)
+                    else:
+                        vertices.append(corners)
+            if modules_only:
+                vertices_reshaped = np.array(vertices).reshape((-1, 3))
+                module_mesh = trimesh.convex.convex_hull(vertices_reshaped)
+
+                module_mesh = set_module_color(
+                    module_mesh,
+                    detector_efficiencies,
+                    mod_i,
+                    num_det_in_module,
+                    det_el, random_color
+                )
+
+                shapes.append(module_mesh)
+
+    if fov is not None:
+        shapes.append(
+            trimesh.creation.cylinder(radius=fov[0], height=fov[1])
+        )
+    return trimesh.util.concatenate(shapes)
+
+
 #########################################################################################
 # Main
 #########################################################################################
@@ -244,7 +300,6 @@ if __name__ == "__main__":
     else:
         file = open(args.input, "rb")
     output_fname = args.output
-    modules_only = args.modules_only
 
     with petsird.BinaryPETSIRDReader(file) as reader:
         header = reader.read_header()
@@ -253,54 +308,5 @@ if __name__ == "__main__":
         for time_block in reader.read_time_blocks():
             pass
 
-        detector_efficiencies = extract_detector_eff(args.show_det_eff, header)
-
-        shapes = []
-        # draw all crystals
-        for rep_module in header.scanner.scanner_geometry.replicated_modules:
-            det_el = (
-                rep_module.object.detecting_elements
-            )  # Get all the detecting elements modules
-            for mod_i in range(len(rep_module.transforms)):
-                vertices = []  # If showing modules only
-                mod_transform = rep_module.transforms[mod_i]
-                for rep_volume in det_el:
-                    num_det_in_module = len(rep_volume.transforms)
-                    for det_i in range(num_det_in_module):
-                        transform = rep_volume.transforms[det_i]
-                        box: petsird.BoxShape = transform_BoxShape(
-                            mult_transforms([mod_transform, transform]),
-                            rep_volume.object.shape,
-                        )
-                        corners = []
-                        for boxcorner in box.corners:
-                            corners.append(boxcorner.c)
-
-                        if not modules_only:
-                            det_mesh = create_box_from_vertices(corners)
-
-                            det_mesh = set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i, args.random_color)
-
-                            shapes.append(det_mesh)
-                        else:
-                            vertices.append(corners)
-                if modules_only:
-                    vertices_reshaped = np.array(vertices).reshape((-1, 3))
-                    module_mesh = trimesh.convex.convex_hull(vertices_reshaped)
-
-                    module_mesh = set_module_color(
-                            module_mesh,
-                            detector_efficiencies,
-                            mod_i,
-                            num_det_in_module,
-                            det_el, args.random_color
-                        )
-
-                    shapes.append(module_mesh)
-
-        if args.fov is not None:
-            shapes.append(
-                trimesh.creation.cylinder(radius=args.fov[0], height=args.fov[1])
-            )
-        combined = trimesh.util.concatenate(shapes)
-        combined.export(output_fname)
+        mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov)
+        mesh.export(output_fname)

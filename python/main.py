@@ -117,25 +117,14 @@ def create_box_from_vertices(vertices):
 
 
 def extract_detector_eff(show_det_eff, header):
-    if header.scanner.detection_efficiencies.det_el_efficiencies is not None:
-        if show_det_eff == True:
-            detector_efficiencies = header.scanner.detection_efficiencies.det_el_efficiencies
-        else:
-            detector_efficiencies = np.ones(
-                header.scanner.detection_efficiencies.det_el_efficiencies.shape
-            )
-            # For viewing purporse, we simply get the mean of detector efficiency energy-wise
-        detector_efficiencies = np.mean(detector_efficiencies, axis=1)
-    elif (
-        header.scanner.detection_efficiencies.det_el_efficiencies is None
-        and show_det_eff == True
-    ):
-        sys.exit(
-            "The scanner detection efficiencies is not defined. Correct this or remove the detector efficiency flag."
+    if not show_det_eff:
+        return None
+
+    if header.scanner.detection_efficiencies.det_el_efficiencies is None:
+        raise ValueError(
+            "The scanner detection efficiencies are not defined. Correct this or remove the show_det_eff flag."
         )
-    else:
-        detector_efficiencies = None
-    return detector_efficiencies
+    return header.scanner.detection_efficiencies.det_el_efficiencies
 
     
 def set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i, random_color):

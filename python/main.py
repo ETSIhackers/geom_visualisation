@@ -316,10 +316,9 @@ if __name__ == "__main__":
 
     with petsird.BinaryPETSIRDReader(file) as reader:
         header = reader.read_header()
-
+        module_indices = range(0, args.num_modules * (args.skip_modules + 1), args.skip_modules + 1) if args.num_modules > 0 else None
         mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov,
-                           range(0, args.num_modules * (args.skip_modules + 1), args.skip_modules + 1)
-                           if args.num_modules > 0 else None
+                          module_indices
         )
         mesh.export(output_fname)
 

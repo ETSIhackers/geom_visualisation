@@ -37,6 +37,39 @@ crystal_color = np.array([255, 40, 40], dtype=np.uint8)
 
 
 #########################################################################################
+# Classes
+#########################################################################################
+
+# Custom range class where the "stop" can be undefined, but you
+# can still check if an element is in the range
+class UnknownStopRange:
+    def __init__(self, start:int=0, step:int=1, stop=None):
+        self.start = start
+        assert step > 0
+        self.step = step
+        self.stop = stop
+
+    def __iter__(self):
+        self.current = self.start
+        return self
+
+    def __next__(self):
+        if self.stop is not None and self.current >= self.stop:
+            raise StopIteration
+        value = self.current
+        self.current += self.step
+        return value
+
+    def __contains__(self, element:int):
+        # Calculate if element - start is a multiple of step
+        if ((element - self.start) % self.step) == 0:
+            # Check if it’s within the stop range if stop is specified
+            if self.stop is None:
+                return True
+            return element < self.stop
+        return False
+
+#########################################################################################
 # Methods
 #########################################################################################
 def transform_to_mat44(
@@ -306,6 +339,8 @@ if __name__ == "__main__":
     args = parserCreator()
     if args.skip_modules < 0:
         sys.exit('skip_modules should be >= 0')
+    if args.num_modules < 0:
+        sys.exit('num_modules should be >= 0')
 
     file = None
     if args.input is None:
@@ -316,7 +351,14 @@ if __name__ == "__main__":
 
     with petsird.BinaryPETSIRDReader(file) as reader:
         header = reader.read_header()
-        module_indices = range(0, args.num_modules * (args.skip_modules + 1), args.skip_modules + 1) if args.num_modules > 0 else None
+
+        if args.num_modules > 0:
+            module_indices = range(0, args.num_modules * (args.skip_modules + 1), args.skip_modules + 1)
+        elif args.skip_modules > 0:
+            module_indices = UnknownStopRange(0, step=args.skip_modules + 1)
+        else:
+            module_indices = None
+
         mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov,
                           module_indices
         )

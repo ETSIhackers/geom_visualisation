@@ -349,21 +349,17 @@ if __name__ == "__main__":
         file = open(args.input, "rb")
     output_fname = args.output
 
-    with petsird.BinaryPETSIRDReader(file) as reader:
-        header = reader.read_header()
+    reader = petsird.BinaryPETSIRDReader(file)
+    header = reader.read_header()
+    if args.num_modules > 0:
+        module_indices = range(0, args.num_modules * (args.skip_modules + 1), args.skip_modules + 1)
+    elif args.skip_modules > 0:
+        module_indices = UnknownStopRange(0, step=args.skip_modules + 1)
+    else:
+        module_indices = None
 
-        if args.num_modules > 0:
-            module_indices = range(0, args.num_modules * (args.skip_modules + 1), args.skip_modules + 1)
-        elif args.skip_modules > 0:
-            module_indices = UnknownStopRange(0, step=args.skip_modules + 1)
-        else:
-            module_indices = None
+    mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov,
+                        module_indices
+    )
+    mesh.export(output_fname)
 
-        mesh = create_mesh(header, args.modules_only, args.show_det_eff, args.random_color, args.fov,
-                          module_indices
-        )
-        mesh.export(output_fname)
-
-        # Forced to do this
-        for time_block in reader.read_time_blocks():
-            pass

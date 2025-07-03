@@ -1,0 +1,4 @@
+petsird==0.7
+matplotlib
+trimesh
+scipy

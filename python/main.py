@@ -26,6 +26,7 @@ import os
 import numpy as np
 import numpy.typing as npt
 import petsird
+import petsird.helpers.geometry
 import trimesh
 import argparse
 
@@ -39,59 +40,6 @@ crystal_color = np.array([255, 40, 40], dtype=np.uint8)
 #########################################################################################
 # Methods
 #########################################################################################
-def transform_to_mat44(
-    transform: petsird.RigidTransformation,
-) -> npt.NDArray[np.float32]:
-    return np.vstack([transform.matrix, [0, 0, 0, 1]])
-
-
-def mat44_to_transform(mat: npt.NDArray[np.float32]) -> petsird.RigidTransformation:
-    return petsird.RigidTransformation(matrix=mat[0:3, :])
-
-
-def coordinate_to_homogeneous(coord: petsird.Coordinate) -> npt.NDArray[np.float32]:
-    return np.hstack([coord.c, 1])
-
-
-def homogeneous_to_coordinate(
-    hom_coord: npt.NDArray[np.float32],
-) -> petsird.Coordinate:
-    return petsird.Coordinate(c=hom_coord[0:3])
-
-
-def mult_transforms(
-    transforms: list[petsird.RigidTransformation],
-) -> petsird.RigidTransformation:
-    """multiply rigid transformations"""
-    mat = np.array(
-        ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)),
-        dtype="float32",
-    )
-
-    for t in reversed(transforms):
-        mat = np.matmul(transform_to_mat44(t), mat)
-    return mat44_to_transform(mat)
-
-
-def mult_transforms_coord(
-    transforms: list[petsird.RigidTransformation], coord: petsird.Coordinate
-) -> petsird.Coordinate:
-    """apply list of transformations to coordinate"""
-    # TODO better to multiply with coordinates in sequence, as first multiplying the matrices
-    hom = np.matmul(
-        transform_to_mat44(mult_transforms(transforms)),
-        coordinate_to_homogeneous(coord),
-    )
-    return homogeneous_to_coordinate(hom)
-
-
-def transform_BoxShape(
-    transform: petsird.RigidTransformation, box_shape: petsird.BoxShape
-) -> petsird.BoxShape:
-    return petsird.BoxShape(
-        corners=[mult_transforms_coord([transform], c) for c in box_shape.corners]
-    )
-
 
 def create_box_from_vertices(vertices):
     # Define faces using the indices of vertices that make up each face
@@ -120,25 +68,26 @@ def extract_detector_eff(show_det_eff, header):
     if not show_det_eff:
         return None
 
-    if header.scanner.detection_efficiencies.det_el_efficiencies is None:
+    eff = header.scanner.detection_efficiencies.detection_bin_efficiencies
+    if eff is None:
         raise ValueError(
             "The scanner detection efficiencies are not defined. Correct this or remove the show_det_eff flag."
         )
-    return header.scanner.detection_efficiencies.det_el_efficiencies
+    return eff
 
     
-def set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i, random_color):
+def set_detector_color(det_mesh, detector_efficiencies, type_of_module, num_modules, mod_i, num_det_in_module, det_i, random_color):
     if random_color == True:
         color = np.random.randint(0, 255, size=3)
     elif detector_efficiencies is not None:
-        color = (crystal_color * detector_efficiencies[mod_i * num_det_in_module + det_i])
+        eff = np.reshape(detector_efficiencies[type_of_module], shape=(num_modules, num_det_in_module, -1))
+        color = (crystal_color * np.mean(eff[mod_i, det_i, :]))
     else:
         color = crystal_color
     
     f_color = np.array([color[0], color[1], color[2], 50]).astype(
         np.uint8
     )
-
     det_mesh.visual.face_colors = f_color
 
     return det_mesh
@@ -146,17 +95,15 @@ def set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module
 
 
 def set_module_color(
-    module_mesh, detector_efficiencies, mod_i, num_det_in_module, det_el, random_color
+        module_mesh, detector_efficiencies, type_of_module, num_modules, mod_i, num_det_in_module, random_color
 ):
     if random_color == True:
         color = np.random.randint(0, 255, size=3)
     elif detector_efficiencies is not None:
-        # Mean of the detector efficiency in the current module
+        # Mean of the detector efficiencies in the current module
+        eff = np.reshape(detector_efficiencies[type_of_module], shape=(num_modules, num_det_in_module, -1))
         color = crystal_color * np.mean(
-            detector_efficiencies.reshape((-1, len(det_el) * num_det_in_module))[
-                mod_i, :
-            ]
-        )
+            eff[mod_i, :, :])
     else:
         color = crystal_color
 
@@ -177,8 +124,10 @@ def create_mesh(header, modules_only=False, show_det_eff=False, random_color=Fal
     shapes = []
     # draw all crystals
     module_count = 0
-    for rep_module in header.scanner.scanner_geometry.replicated_modules:
-        det_el = (
+    for type_of_module in range(len(header.scanner.scanner_geometry.replicated_modules)):
+        rep_module = header.scanner.scanner_geometry.replicated_modules[type_of_module]
+        num_modules = len(rep_module.transforms)
+        det_els = (
             rep_module.object.detecting_elements
         )  # Get all the detecting elements modules
         for mod_i in range(len(rep_module.transforms)):
@@ -188,26 +137,26 @@ def create_mesh(header, modules_only=False, show_det_eff=False, random_color=Fal
 
             vertices = []  # If showing modules only
             mod_transform = rep_module.transforms[mod_i]
-            for rep_volume in det_el:
-                num_det_in_module = len(rep_volume.transforms)
-                for det_i in range(num_det_in_module):
-                    transform = rep_volume.transforms[det_i]
-                    box: petsird.BoxShape = transform_BoxShape(
-                        mult_transforms([mod_transform, transform]),
-                        rep_volume.object.shape,
-                    )
-                    corners = []
-                    for boxcorner in box.corners:
-                        corners.append(boxcorner.c)
-                        
-                    if not modules_only:
-                        det_mesh = create_box_from_vertices(corners)
+            num_det_in_module = len(det_els.transforms)
+            for det_i in range(num_det_in_module):
+                transform = det_els.transforms[det_i]
+                box: petsird.BoxShape = petsird.helpers.geometry.transform_BoxShape(
+                    petsird.helpers.geometry.mult_transforms(
+                        [mod_transform, transform]),
+                    det_els.object.shape,
+                )
+                corners = []
+                for boxcorner in box.corners:
+                    corners.append(boxcorner.c)
+
+                if not modules_only:
+                    det_mesh = create_box_from_vertices(corners)
                             
-                        det_mesh = set_detector_color(det_mesh, detector_efficiencies, mod_i, num_det_in_module, det_i, random_color)
+                    det_mesh = set_detector_color(det_mesh, detector_efficiencies, type_of_module, num_modules, mod_i, num_det_in_module, det_i, random_color)
                             
-                        shapes.append(det_mesh)
-                    else:
-                        vertices.append(corners)
+                    shapes.append(det_mesh)
+                else:
+                    vertices.append(corners)
             if modules_only:
                 vertices_reshaped = np.array(vertices).reshape((-1, 3))
                 module_mesh = trimesh.convex.convex_hull(vertices_reshaped)
@@ -215,9 +164,11 @@ def create_mesh(header, modules_only=False, show_det_eff=False, random_color=Fal
                 module_mesh = set_module_color(
                     module_mesh,
                     detector_efficiencies,
+                    type_of_module,
+                    num_modules,
                     mod_i,
                     num_det_in_module,
-                    det_el, random_color
+                    random_color
                 )
 
                 shapes.append(module_mesh)

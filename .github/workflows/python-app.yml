@@ -1,0 +1,18 @@
+steps:
+- uses: actions/checkout@v4
+- name: Set up Python
+  uses: actions/setup-python@v5
+  with:
+    python-version: '3.x'
+    cache: 'pip'
+- name: Install dependencies
+  run: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+- name: Test on generated file
+  shell: bash
+  run: |
+    set -ex
+    python -m petsird.helpers.generator | python python/main.py -o test.ply
+    # minimal test if readable output
+    test -r test.ply

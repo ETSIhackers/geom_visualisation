@@ -88,7 +88,6 @@ def set_detector_color(det_mesh, detector_efficiencies, type_of_module, num_modu
     f_color = np.array([color[0], color[1], color[2], 50]).astype(
         np.uint8
     )
-    print(f_color)
     det_mesh.visual.face_colors = f_color
 
     return det_mesh
@@ -264,7 +263,7 @@ if __name__ == "__main__":
         file = sys.stdin.buffer
     else:
         file = open(args.input, "rb")
-        output_fname = args.output
+    output_fname = args.output
 
     with petsird.BinaryPETSIRDReader(file) as reader:
         header = reader.read_header()

@@ -1,4 +1,4 @@
-petsird==0.7
+petsird>=0.7
 matplotlib
 trimesh
 scipy

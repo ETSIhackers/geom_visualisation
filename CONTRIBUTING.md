@@ -92,46 +92,4 @@ of the copied code is (and follow its terms of course).
 
 ```
 
-
-## Submodules
-
-This project uses [submodules] to point to a specific version of the PETSIRD model. If you want to use a more recent model,
-you will need to update the submodule.
-
-1. How to pull updates to this repo
-```bash
-# first time
-git clone <repo-url> --recursive
-# subsequently
-git pull --recurse-submodules
-# or
-git pull
-git submodule update --init --recursive
-```
-2. How to update to the most recent version of the model
-```bash
-git submodule update --remote --recursive --init
-```
-
-3.  How to update to a specific version of the model
-```bash
-# first get the version you want
-cd PETSIRD
-git fetch
-git checkout v1.0.0
-cd ..
-# now tell the main project to use that version
-git add PETSIRD
-# probably update some other files
-git commit -m "Use PETSIRD v1.0.0"
-```
-4. Switching branches
-
-If different branches have different versions of the submodule, it is highly recommended to use
-```bash
-git switch --recurse-submodules <new-branch>
-```
-Without the `--recurse-submodules` option, the submodule will be kept the same as on the
-original branch, and you need to manually run `git submodule update --recursive`.
-
-[submodules]: https://git-scm.com/docs/gitsubmodules
+[issue-tracker]: https://github.com/ETSIhackers/geom_visualisation/issues

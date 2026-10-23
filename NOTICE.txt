@@ -1,9 +1,13 @@
-Copyright 2023 University College London (UCL)
+Copyright 2024 Yale University
+Copyright 2024 Sherbrooke University
+Copyright 2024-2026  University College London (UCL)
 
 This software product is developed for the Emission Tomography Standardization
 Initiative (ETSI), https://etisinitiative.org.
 
 Main contributors:
+Yassir Najmaoui (Yale)
+Maxime Toussaint (Sherbrooke)
 Kris Thielemans (UCL)
 
 ### Apache License ###

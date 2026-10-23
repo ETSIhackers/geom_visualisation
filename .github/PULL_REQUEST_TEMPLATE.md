@@ -16,7 +16,7 @@
 
 ## Contribution Notes
 
-P!-- lease read and adhere to the [contribution guidelines](https://github.com/ETSInitiative/PRDdefinition/blob/master/CONTRIBUTING.md).
+<!-- Please read and adhere to the [contribution guidelines](https://github.com/ETSIhackers/geom_visualisation/blob/main/CONTRIBUTING.md).
 
 Please tick the following: -->
 
